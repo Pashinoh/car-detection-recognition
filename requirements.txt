@@ -1,6 +1,5 @@
-torch
-torchvision
-opencv-python
-numpy
-pandas
 ultralytics
+opencv-python
+flask
+yt-dlp
+scikit-learn

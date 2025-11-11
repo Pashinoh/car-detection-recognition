@@ -1,0 +1,17 @@
+# Python
+.venv
+venv
+env
+__pycache__
+
+# Ultralytics/YOLO
+runs/
+
+# Data
+dataset/
+
+# IDE/OS Specific
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

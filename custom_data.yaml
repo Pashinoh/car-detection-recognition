@@ -1,0 +1,9 @@
+path: D:\python\car-detection-recognition\dataset 
+train: images/train  
+val: images/val 
+
+# Jumlah kelas yang akan Anda latih
+nc: 4 
+
+# Nama-nama kelas Anda
+names: ['car', 'motorcycle', 'bus', 'truck']
