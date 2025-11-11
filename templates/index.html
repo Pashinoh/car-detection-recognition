@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Sistem Analisis Lalu Lintas Real-Time</title>
+    <style>
+        :root {
+            --primary-color: #007bff;
+            --secondary-color: #6c757d;
+            --success-color: #28a745;
+            --info-color: #17a2b8;
+            --dark-color: #343a40;
+            --light-bg: #f8f9fa;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            margin: 0;
+            padding: 0;
+            color: var(--dark-color);
+        }
+        .header {
+            background-color: var(--dark-color);
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 2.2em;
+        }
+        .container {
+            display: flex;
+            max-width: 1200px;
+            margin: 30px auto;
+            gap: 20px;
+        }
+        .video-panel {
+            flex: 2;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 15px;
+        }
+        .analytics-panel {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            height: fit-content; /* Sesuai dengan konten */
+        }
+        img#videoFeed {
+            width: 100%;
+            display: block;
+            border-radius: 4px;
+        }
+        .analytics-panel h2 {
+            border-bottom: 2px solid var(--primary-color);
+            padding-bottom: 10px;
+            margin-top: 0;
+            color: var(--primary-color);
+        }
+        .data-card {
+            background: var(--light-bg);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .data-card strong {
+            font-size: 1.1em;
+            color: var(--dark-color);
+        }
+        .data-card .value {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: var(--success-color);
+        }
+        #fpsDisplay {
+            text-align: right;
+            font-style: italic;
+            color: var(--secondary-color);
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>Sistem Analisis Lalu Lintas Real-Time</h1>
+        <p>Deteksi, Pelacakan, dan Klasifikasi Cepat (YOLOv8n)</p>
+    </div>
+
+    <div class="container">
+        
+        <div class="video-panel">
+            <h2>Live Video Feed</h2>
+            <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Live Video Feed">
+        </div>
+
+        <div class="analytics-panel">
+            <h2>Global Analytics</h2>
+            
+            <div id="fpsDisplay">FPS: Loading...</div>
+
+            <div id="analytics-container">
+                <div class="data-card total-card">
+                    <span>Total Kendaraan Terhitung</span>
+                    <strong id="totalCount" class="value">0</strong>
+                </div>
+                <div class="data-card car-card">
+                    <span>Car</span>
+                    <strong id="CarCount" class="value">0</strong>
+                </div>
+                <div class="data-card truck-card">
+                    <span>Truck</span>
+                    <strong id="TruckCount" class="value">0</strong>
+                </div>
+                <div class="data-card bus-card">
+                    <span>Bus</span>
+                    <strong id="BusCount" class="value">0</strong>
+                </div>
+                <div class="data-card motorcycle-card">
+                    <span>Motorcycle</span>
+                    <strong id="MotorcycleCount" class="value">0</strong>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script>
+        // Fungsi untuk mengambil data analitik dari backend
+        function fetchAnalytics() {
+            fetch('/analytics_data')
+                .then(response => response.json())
+                .then(data => {
+                    // Update Total Count
+                    document.getElementById('totalCount').textContent = data.Total;
+                    
+                    // Update Klasifikasi Tipe Kendaraan
+                    document.getElementById('CarCount').textContent = data.Car || 0;
+                    document.getElementById('TruckCount').textContent = data.Truck || 0;
+                    document.getElementById('BusCount').textContent = data.Bus || 0;
+                    document.getElementById('MotorcycleCount').textContent = data.Motorcycle || 0;
+                    
+                    // Update FPS
+                    document.getElementById('fpsDisplay').textContent = `FPS: ${data.FPS}`;
+                })
+                .catch(error => console.error('Error fetching analytics:', error));
+        }
+
+        // Ambil data setiap 500ms (0.5 detik)
+        setInterval(fetchAnalytics, 500);
+
+        // Panggil saat load pertama
+        fetchAnalytics();
+    </script>
+
+</body>
+</html>
