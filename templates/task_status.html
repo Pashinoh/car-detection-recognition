@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Status Tugas {{ task_id[:8] }}...{% endblock %}
+
+{% block content %}
+
+<div class="card 
+    {% if not is_ready %}
+        card-processing 
+    {% endif %}
+    " style="max-width: 600px; margin: auto; text-align: center;">
+    
+    <div class="card-header">
+        Status Pemrosesan Tugas
+    </div>
+    <div class="card-body">
+        <h3 style="margin-bottom: 20px;">Task ID: <span style="color: var(--primary-color);">{{ task_id }}</span></h3>
+        
+        <p style="font-size: 1.2em; font-weight: bold; margin-bottom: 30px;" id="status-message">
+            {{ status }}
+        </p>
+
+        {% if is_ready %}
+            <a href="{{ url_for('download_file', task_id=task_id) }}" 
+               style="background-color: var(--success-color); color: white; padding: 12px 25px; border-radius: 4px; text-decoration: none; display: inline-block; font-weight: bold;">
+                ✅ Unduh Hasil Deteksi (ZIP)
+            </a>
+            <p style="margin-top: 15px; color: var(--secondary-color);">*File ZIP akan dihapus 5 menit setelah diunduh.</p>
+        {% else %}
+            <div class="loader" style="width: 50px; height: 50px; border: 8px solid #f3f3f3; margin: 10px auto;"></div>
+            
+            <h4 style="color: var(--danger-color); margin-top: 20px;">
+                🔴 TUGAS SEDANG DIPROSES...
+            </h4>
+            
+            <p style="font-size: 0.9em; color: #555; margin-top: 10px;">
+                Estimasi waktu bervariasi tergantung panjang video.
+            </p>
+            <p style="font-size: 0.8em; color: var(--danger-color); font-style: italic;">
+                Halaman akan otomatis dimuat ulang untuk cek status.
+            </p>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+    :root {
+        --danger-color: #dc3545; /* Merah Standar */
+        --processing-bg: #fff5f5; /* Latar merah muda sangat lembut */
+    }
+
+    /* Ini adalah style untuk card saat sedang memproses */
+    .card-processing {
+        background-color: var(--processing-bg) !important;
+        border: 2px solid var(--danger-color) !important;
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.2) !important;
+    }
+    
+    /* Header card juga kita ubah agar serasi */
+    .card-processing .card-header {
+        background-color: #ffe8e8 !important; 
+        color: var(--danger-color) !important;
+        font-weight: bold;
+    }
+
+    .loader {
+        border-top: 8px solid var(--danger-color) !important; 
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+</style>
+
+<script>
+// Auto-refresh halaman status setiap 5 detik
+{% if not is_ready %}
+    setTimeout(() => {
+        window.location.reload();
+    }, 5000);
+{% endif %}
+</script>
+{% endblock %}
