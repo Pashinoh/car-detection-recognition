@@ -86,6 +86,52 @@
             color: var(--secondary-color);
             margin-bottom: 15px;
         }
+
+        /* tambahan styling untuk form + tabel rekap */
+        .input-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 12px;
+            align-items: center;
+        }
+        .input-row input[type="text"] {
+            flex: 1;
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #ccc;
+        }
+        .input-row input[type="file"] {
+            padding: 6px;
+        }
+        .btn {
+            background: var(--primary-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: none;
+            cursor: pointer;
+        }
+        .btn.secondary {
+            background: var(--info-color);
+        }
+        .log-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 12px;
+            font-size: 14px;
+        }
+        .log-table th, .log-table td {
+            border: 1px solid #e0e0e0;
+            padding: 8px;
+            text-align: left;
+        }
+        .log-table th {
+            background: #fafafa;
+        }
+        .small {
+            font-size: 0.9em;
+            color: var(--secondary-color);
+        }
     </style>
 </head>
 <body>
@@ -99,7 +145,40 @@
         
         <div class="video-panel">
             <h2>Live Video Feed</h2>
+
+            <!-- FORM INPUT: link + upload -->
+            <form action="/set_video" method="POST" enctype="multipart/form-data" style="margin-bottom:12px;">
+                <div class="input-row">
+                    <input type="text" name="video_url" placeholder="Masukkan URL YouTube atau link video (opsional)">
+                    <input type="file" name="video_file" accept="video/*">
+                    <button type="submit" class="btn">Tampilkan</button>
+                    <button type="button" class="btn secondary" id="downloadCsvBtn" onclick="downloadCSV()">Simpan CSV</button>
+                </div>
+                <div class="small">Keterangan: Masukkan link atau pilih file, lalu klik <b>Tampilkan</b>. Klik <b>Simpan CSV</b> untuk mengunduh rekapan deteksi.</div>
+            </form>
+
+            <!-- video feed -->
             <img id="videoFeed" src="{{ url_for('video_feed') }}" alt="Live Video Feed">
+
+            <!-- Tabel rekap deteksi -->
+            <h3 style="margin-top:16px; color: var(--dark-color);">Rekapan Deteksi (semua dari awal video)</h3>
+            <div style="max-height:320px; overflow:auto; border-radius:6px; border:1px solid #e8e8e8; padding:8px;">
+                <table class="log-table" id="logTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Waktu (timestamp)</th>
+                            <th>Elapsed (s)</th>
+                            <th>Kelas</th>
+                            <th>Track ID</th>
+                            <th>Frame</th>
+                        </tr>
+                    </thead>
+                    <tbody id="logBody">
+                        <!-- diisi oleh JS -->
+                    </tbody>
+                </table>
+            </div>
         </div>
 
         <div class="analytics-panel">
@@ -134,31 +213,54 @@
     </div>
 
     <script>
-        // Fungsi untuk mengambil data analitik dari backend
+        // ambil analytics setiap 500ms
         function fetchAnalytics() {
             fetch('/analytics_data')
                 .then(response => response.json())
                 .then(data => {
-                    // Update Total Count
-                    document.getElementById('totalCount').textContent = data.Total;
-                    
-                    // Update Klasifikasi Tipe Kendaraan
+                    document.getElementById('totalCount').textContent = data.Total || 0;
                     document.getElementById('CarCount').textContent = data.Car || 0;
                     document.getElementById('TruckCount').textContent = data.Truck || 0;
                     document.getElementById('BusCount').textContent = data.Bus || 0;
                     document.getElementById('MotorcycleCount').textContent = data.Motorcycle || 0;
-                    
-                    // Update FPS
                     document.getElementById('fpsDisplay').textContent = `FPS: ${data.FPS}`;
                 })
-                .catch(error => console.error('Error fetching analytics:', error));
+                .catch(error => {
+                    console.error('Error fetching analytics:', error);
+                });
         }
 
-        // Ambil data setiap 500ms (0.5 detik)
-        setInterval(fetchAnalytics, 500);
+        // ambil seluruh log deteksi
+        function fetchLog() {
+            fetch('/detection_log')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.getElementById('logBody');
+                    tbody.innerHTML = '';
+                    if (!Array.isArray(data)) return;
+                    data.forEach((item, idx) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `<td>${idx+1}</td>
+                                        <td>${item.timestamp}</td>
+                                        <td>${item.elapsed_s}</td>
+                                        <td>${item.class}</td>
+                                        <td>${item.track_id}</td>
+                                        <td>${item.frame_no}</td>`;
+                        tbody.appendChild(tr);
+                    });
+                })
+                .catch(err => console.error('Error fetching log:', err));
+        }
 
-        // Panggil saat load pertama
+        // download CSV (buka rute yang mengirim file)
+        function downloadCSV() {
+            window.open('/download_csv', '_blank');
+        }
+
+        setInterval(fetchAnalytics, 500);
+        setInterval(fetchLog, 1000); // update log tiap 1 detik
         fetchAnalytics();
+        fetchLog();
     </script>
 
 </body>
