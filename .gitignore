@@ -8,7 +8,7 @@ __pycache__
 
 # Data
 dataset/
-runs/
+/runs/
 
 # IDE/OS Specific
 .vscode/
