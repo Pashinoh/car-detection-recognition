@@ -29,10 +29,9 @@ DB_CONFIG = {
     'database': 'traffic_db' 
 }
 
-# --- (PERUBAHAN 1) Konfigurasi Global (Bukan Konstanta) ---
-# YOUTUBE_URL diganti menjadi variabel global agar bisa diubah
+# --- Konfigurasi Global (Bukan Konstanta) ---
 CURRENT_YOUTUBE_URL = "https://www.youtube.com/live/aV0fzw8wH2o?si=f-nuqF2KzWUQ0tsP" 
-MODEL_NAME = 'runs/detect/train/weights/best.pt' # <-- Model CUSTOM Anda untuk Live Stream
+MODEL_NAME = 'model/best.pt' # <-- Model CUSTOM Anda untuk Live Stream
 CCTV_LOCATION = "Jembatan (DB Connected)" 
 VEHICLE_CLASSES = [0, 1, 2, 3] # <-- ID Kelas Custom
 
@@ -103,6 +102,7 @@ def get_db_connection():
         return None
 
 def update_db_count(column_name):
+    """Menambah +1 ke tabel TOTAL (traffic_stats)"""
     conn = get_db_connection()
     if conn:
         try:
@@ -112,13 +112,37 @@ def update_db_count(column_name):
             conn.commit()
             print(f"DB INFO (Live): Menambah 1 ke {column_name}")
         except mysql.connector.Error as err:
-            print(f"ERROR DB: Gagal update: {err}")
+            print(f"ERROR DB: Gagal update total: {err}")
         finally:
             if conn and conn.is_connected():
                 cursor.close()
                 conn.close()
 
+# --- (FUNGSI BARU) Menambahkan Log Timestamp (Live Stream) ---
+def log_detection_to_db(ts, class_name, track_id, source_id):
+    """Menyisipkan log deteksi BARU ke tabel detection_log"""
+    conn = get_db_connection()
+    if conn:
+        try:
+            cursor = conn.cursor()
+            query = """
+                INSERT INTO detection_log (timestamp, class_name, track_id, source)
+                VALUES (%s, %s, %s, %s)
+            """
+            values = (ts, class_name, track_id, source_id)
+            cursor.execute(query, values)
+            conn.commit()
+            print(f"DB LOG (Live): Mencatat {class_name} (ID: {track_id})")
+        except mysql.connector.Error as err:
+            print(f"ERROR DB: Gagal mencatat log: {err}")
+        finally:
+            if conn and conn.is_connected():
+                cursor.close()
+                conn.close()
+# -----------------------------------------------
+
 def fetch_db_counts():
+    """Mengambil TOTAL hitungan dari traffic_stats"""
     conn = get_db_connection()
     if conn:
         try:
@@ -135,14 +159,14 @@ def fetch_db_counts():
                 conn.close()
     return None
 
-# --- (PERUBAHAN 2) FUNGSI BARU UNTUK RESET DATABASE ---
 def reset_db_counts():
-    """Mengatur ulang semua penghitung kendaraan di database kembali ke 0."""
+    """(DIPERBARUI) Mengatur ulang KEDUA tabel (total dan log)"""
     conn = get_db_connection()
     if conn:
         try:
             cursor = conn.cursor()
-            query = """
+            # 1. Reset tabel total
+            query_total = """
                 UPDATE traffic_stats 
                 SET total_car = 0, 
                     total_motorcycle = 0, 
@@ -150,16 +174,20 @@ def reset_db_counts():
                     total_truck = 0 
                 WHERE id = 1
             """
-            cursor.execute(query)
+            cursor.execute(query_total)
+            
+            # 2. Hapus semua data dari tabel log
+            query_log = "TRUNCATE TABLE detection_log"
+            cursor.execute(query_log)
+            
             conn.commit()
-            print("✅ DATABASE RESET: Semua hitungan direset ke 0.")
+            print("✅ DATABASE RESET: Tabel 'traffic_stats' dan 'detection_log' telah direset.")
         except mysql.connector.Error as err:
             print(f"🔥 ERROR: Gagal me-reset database: {err}")
         finally:
             if conn and conn.is_connected():
                 cursor.close()
                 conn.close()
-# ---------------------------------------------------
 
 # --- Fungsi Pengambilan Stream YouTube ---
 def get_youtube_stream_url(url, quality='480p'):
@@ -181,18 +209,15 @@ def generate_frames():
         return
 
     cap = None
-    # Simpan URL saat ini untuk loop ini
     active_url = CURRENT_YOUTUBE_URL 
     
     while cap is None or not cap.isOpened():
-        # Gunakan variabel global CURRENT_YOUTUBE_URL
         stream_url = get_youtube_stream_url(active_url) or active_url
         cap = cv2.VideoCapture(stream_url)
         if not cap.isOpened():
             print("FATAL ERROR: Gagal membuka stream video. Mencoba lagi dalam 5 detik...")
             current_fps = 0.0
             time.sleep(5)
-            # Jika URL diganti saat sedang mencoba ulang, hentikan loop ini
             if active_url != CURRENT_YOUTUBE_URL:
                 print("INFO: URL Stream diganti, menghentikan percobaan koneksi lama.")
                 break
@@ -200,15 +225,10 @@ def generate_frames():
         print(f"INFO: Stream berhasil dibuka untuk {active_url}")
 
     while True:
-        # --- (PERUBAHAN 3) Cek jika URL diganti ---
-        # Jika URL global telah diubah oleh /update_stream, hentikan pemrosesan frame ini.
-        # Rute /video_feed di browser akan otomatis memanggil ulang generate_frames()
-        # dan memulai ulang dengan URL baru.
         if active_url != CURRENT_YOUTUBE_URL:
             print("INFO: URL Stream diganti. Menghentikan stream lama.")
             cap.release()
             break
-        # ----------------------------------------
             
         start_time = time.time() 
         ret, frame = cap.read()
@@ -249,7 +269,15 @@ def generate_frames():
                 
                 if is_passing_line and not tracked_vehicles[track_id]['counted']:
                     if db_column:
-                        update_db_count(db_column) # UPDATE DATABASE
+                        # --- (PERUBAHAN DI SINI) ---
+                        # 1. Update total hitungan (Tabel Lama)
+                        update_db_count(db_column) 
+                        
+                        # 2. Catat log timestamp (Tabel Baru)
+                        ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                        log_detection_to_db(ts, vehicle_name, int(track_id), "Live Stream")
+                        # -------------------------
+                        
                     tracked_vehicles[track_id]['counted'] = True
                     cv2.line(annotated_frame, LINE_START, LINE_END, (0, 255, 255), 4) 
                 
@@ -301,9 +329,9 @@ def video_feed():
 
 @app.route('/analytics_data')
 def analytics_data():
-    """Endpoint untuk data statistik DB real-time."""
+    """Endpoint untuk data statistik DB real-time (TOTAL)."""
     global current_fps, CCTV_LOCATION, db_connected, CURRENT_YOUTUBE_URL
-    db_counts = fetch_db_counts()
+    db_counts = fetch_db_counts() # Mengambil dari traffic_stats (Total)
     
     counts_data = {'Total': 0, 'Car': 0, 'Motorcycle': 0, 'Bus': 0, 'Truck': 0}
     if db_counts:
@@ -317,44 +345,35 @@ def analytics_data():
         'location': CCTV_LOCATION,
         'fps': f"{current_fps:.2f}",
         'db_status': 'ONLINE' if db_connected and db_counts is not None else 'OFFLINE',
-        'counts': counts_data,
-        'current_url': CURRENT_YOUTUBE_URL # Kirim URL saat ini ke frontend
+        'counts': counts_data, 
+        'current_url': CURRENT_YOUTUBE_URL 
     }
     return jsonify(response_data)
 
 @app.route('/')
 def index():
-    # Kirim URL saat ini saat halaman dimuat pertama kali
     return render_template('index.html', current_url=CURRENT_YOUTUBE_URL)
 
-# --- (PERUBAHAN 4) RUTE BARU UNTUK UPDATE STREAM DAN RESET ---
 @app.route('/update_stream', methods=['POST'])
 def update_stream():
-    global CURRENT_YOUTUBE_URL, tracked_vehicles
+    """(DIPERBARUI) Mengganti URL dan MERESET KEDUA tabel database."""
+    global CURRENT_YOUTUBE_URL, tracked_vehicles, current_fps
     
     if request.method == 'POST':
         new_url = request.form.get('youtube_url')
         if new_url and "youtube.com" in new_url or "youtu.be" in new_url:
-            # 1. Ganti URL global
             CURRENT_YOUTUBE_URL = new_url
             print(f"✅ STREAM UPDATE: URL diubah menjadi {new_url}")
             
-            # 2. Reset hitungan database ke 0
+            # Reset KEDUA tabel (total dan log)
             reset_db_counts()
             
-            # 3. Bersihkan pelacak kendaraan di memori
             tracked_vehicles.clear()
-            
-            # 4. Set FPS ke 0 sementara (akan diupdate oleh stream baru)
-            global current_fps
             current_fps = 0.0
-            
         else:
             print("WARNING: Menerima URL tidak valid, diabaikan.")
             
-    # Arahkan pengguna kembali ke halaman utama
     return redirect(url_for('index'))
-# ---------------------------------------------------
 
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_page():
@@ -419,7 +438,6 @@ def upload_page():
 
 @app.route('/status/<task_id>')
 def task_status(task_id):
-    # Mencari .zip bukan .mp4
     download_path = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{task_id}.zip") 
     is_ready = os.path.exists(download_path)
     status_msg = "Pemrosesan Selesai! File siap diunduh." if is_ready else "Sedang diproses. Mohon tunggu..."
@@ -428,7 +446,6 @@ def task_status(task_id):
 
 @app.route('/download/<task_id>')
 def download_file(task_id):
-    # Mengunduh .zip bukan .mp4
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{task_id}.zip") 
     
     if os.path.exists(filepath):
@@ -439,58 +456,68 @@ def download_file(task_id):
             run_date=delete_time, 
             args=[filepath], 
             id=f"delete_proc_{task_id}", 
-            replace_existing=True  # Perbaikan ConflictingIdError
+            replace_existing=True
         )
         
         print(f"⏰ SCHEDULER: File HASIL {filepath} akan dihapus pada {delete_time} (Jadwal diperbarui)")
         
         return send_file(
             filepath, 
-            mimetype='application/zip', # Tipe mimetype ZIP
+            mimetype='application/zip',
             as_attachment=True, 
-            download_name=f"processed_traffic_{task_id}.zip" # Nama file ZIP
+            download_name=f"processed_traffic_{task_id}.zip"
         )
     
     return "File tidak ditemukan atau tidak ada deteksi (file ZIP tidak dibuat).", 404
 
-# --- Rute Download Rekap CSV ---
+# ----------------------------------------------------
+#               (RUTE DOWNLOAD CSV - DIPERBARUI)
+# ----------------------------------------------------
 @app.route('/download_rekap_csv')
 def download_rekap_csv():
-    db_counts = fetch_db_counts()
-    if not db_counts:
-        return "Database error atau tidak ada data ditemukan.", 404
-
-    output = io.StringIO()
-    rekap_data = []
-    total_keseluruhan = 0
+    """(DIPERBARUI) Mengunduh log deteksi mentah dari tabel 'detection_log'"""
     
-    for key, value in db_counts.items():
-        if key == 'id':
-            continue 
+    conn = get_db_connection()
+    if not conn:
+        return "Database error.", 500
         
-        nama_kategori = key.replace('_', ' ').title()
-        rekap_data.append({'Kategori': nama_kategori, 'Jumlah': value})
-        total_keseluruhan += value
-    
-    rekap_data.append({'Kategori': 'Total Keseluruhan', 'Jumlah': total_keseluruhan})
+    try:
+        cursor = conn.cursor(dictionary=True)
+        # 1. Ambil SEMUA data dari tabel log baru
+        query = "SELECT id, timestamp, class_name, track_id, source FROM detection_log ORDER BY timestamp ASC"
+        cursor.execute(query)
+        log_data = cursor.fetchall()
+        
+        if not log_data:
+            return "Tidak ada data log untuk diekspor (database kosong).", 404
 
-    if not rekap_data:
-         return "Tidak ada data untuk diekspor.", 404
-         
-    writer = csv.DictWriter(output, fieldnames=['Kategori', 'Jumlah'])
-    writer.writeheader() 
-    writer.writerows(rekap_data) 
-    
-    output.seek(0)
-    filename = f"rekap_total_kendaraan_{datetime.now().strftime('%Y%m%d')}.csv"
-    
-    return Response(
-        output.getvalue(),
-        mimetype="text/csv",
-        headers={
-            "Content-Disposition": f"attachment;filename={filename}"
-        }
-    )
+        # 2. Siapkan file CSV di memori
+        output = io.StringIO()
+        fieldnames = ['id', 'timestamp', 'class_name', 'track_id', 'source']
+        writer = csv.DictWriter(output, fieldnames=fieldnames)
+        
+        # 3. Tulis data ke CSV
+        writer.writeheader() 
+        writer.writerows(log_data) 
+        
+        # 4. Siapkan file untuk didownload oleh user
+        output.seek(0)
+        filename = f"rekap_deteksi_kendaraan_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv"
+        
+        return Response(
+            output.getvalue(),
+            mimetype="text/csv",
+            headers={
+                "Content-Disposition": f"attachment;filename={filename}"
+            }
+        )
+        
+    except mysql.connector.Error as err:
+        return f"Error saat mengambil data log: {err}", 500
+    finally:
+        if conn and conn.is_connected():
+            cursor.close()
+            conn.close()
 
 # --- Jalankan Aplikasi ---
 if __name__ == '__main__':
@@ -499,5 +526,4 @@ if __name__ == '__main__':
     print("  Akses dashboard live di http://127.0.0.1:5000/")
     print("  Akses halaman upload di http://127.0.0.1:5000/upload")
     print("="*50)
-    # use_reloader=False penting untuk mencegah apscheduler berjalan dua kali
     app.run(host='0.0.0.0', port=5000, debug=True, threaded=True, use_reloader=False)
