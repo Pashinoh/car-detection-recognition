@@ -53,7 +53,7 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=yellow)
 ![Flask](https://img.shields.io/badge/Flask-Web_Server-black?logo=flask)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-Object-Detection-blueviolet)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Object_Detection-blueviolet)
 ![OpenCV](https://img.shields.io/badge/OpenCV-Video_process-orange?logo=opencv)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
 ![HTML5](https://img.shields.io/badge/HTML5-Frontend-red?logo=html5)
