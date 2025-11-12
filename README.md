@@ -3,10 +3,10 @@
 Sistem analisis lalu lintas berbasis web yang menyediakan deteksi dan penghitungan kendaraan secara *real-time* dari *stream* YouTube, serta pemrosesan video *on-demand* dengan model AI yang berbeda.
 
 <p align="center">
-  <img src="https://imgur.com/a/NCLeYoS" alt="Demo Aplikasi" width="800"/>
+  <img src="https://imgur.com/a/NCLeYoS.gif" alt="Demo Aplikasi" width="800"/>
 </p>
 <p align="center">
-  <img src="https://imgur.com/a/ACXSSwo" alt="snapshot" width="800"/>
+  <img src="https://imgur.com/a/ACXSSwo.png" alt="snapshot" width="800"/>
 </p>
 
 ---
