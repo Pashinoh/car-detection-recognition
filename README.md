@@ -3,7 +3,10 @@
 Sistem analisis lalu lintas berbasis web yang menyediakan deteksi dan penghitungan kendaraan secara *real-time* dari *stream* YouTube, serta pemrosesan video *on-demand* dengan model AI yang berbeda.
 
 <p align="center">
-  <img src="[MASUKKAN LINK KE SCREENSHOT ATAU GIF DEMO ANDA DI SINI]" alt="Demo Aplikasi" width="800"/>
+  <img src="https://imgur.com/a/NCLeYoS" alt="Demo Aplikasi" width="800"/>
+</p>
+<p align="center">
+  <img src="https://imgur.com/a/ACXSSwo" alt="snapshot" width="800"/>
 </p>
 
 ---
@@ -48,14 +51,14 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 
 ## 🛠️ Tumpukan Teknologi (Technology Stack)
 
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?logo=python&logoColor=yellow)
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=yellow)
 ![Flask](https://img.shields.io/badge/Flask-Web_Server-black?logo=flask)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-Deteksi_Objek-blueviolet)
-![OpenCV](https://img.shields.io/badge/OpenCV-Pemrosesan_Video-orange?logo=opencv)
+![YOLOv8](https://img.shields.io/badge/YOLOv8-Object-Detection-blueviolet)
+![OpenCV](https://img.shields.io/badge/OpenCV-Video_process-orange?logo=opencv)
 ![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
 ![HTML5](https://img.shields.io/badge/HTML5-Frontend-red?logo=html5)
 ![CSS3](https://img.shields.io/badge/CSS3-Styling-blue?logo=css3)
-![JavaScript](https://img.shields.io/badge/JavaScript-Dinamis-yellow?logo=javascript)
+![JavaScript](https://img.shields.io/badge/JavaScript-Dynamic-yellow?logo=javascript)
 
 ---
 
@@ -70,10 +73,10 @@ Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan databas
 Ikuti langkah-langkah ini untuk menjalankan aplikasi secara lokal.
 
 ### 1. Prasyarat
-* Python 3.10+
+* Python 3.11+
 * Server MySQL (Contoh: **XAMPP** dengan **phpMyAdmin**)
 
 ### 2. Kloning Repositori
 ```bash
-git clone [https://link-ke-repo-anda.git](https://link-ke-repo-anda.git)
-cd nama-folder-proyek
+git clone https://github.com/Pashinoh/car-detection-recognition.git
+cd car-detection-recognition
