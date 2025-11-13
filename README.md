@@ -31,6 +31,10 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
     1.  **Live Stream:** Menggunakan model **YOLOv8 kustom (`best.pt`)** yang dilatih untuk 4 kelas (Mobil, Motor, Bus, Truk).
     2.  **Proses Upload:** Menggunakan model **YOLOv8n standar (`yolov8n.pt`)** untuk fleksibilitas, memetakan kelas COCO ke database.
 
+    <p align="center">
+    <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/log.png" alt="snapshot" width="800"/>
+    </p>
+
 -   **📤 Pemrosesan Latar Belakang & Output ZIP:**
     -   Halaman `/upload` terpisah untuk memproses video atau link YouTube di latar belakang (`threading`).
     -   **Anti-Video Rusak:** Prosesor tidak membuat file MP4. Sebaliknya, ia **menyimpan satu gambar JPG** berkualitas tinggi setiap kali kendaraan **dihitung** (melintasi garis).
@@ -66,6 +70,9 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 
 Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan database yang sama.
 
+<p align="center">
+  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/interface.png" alt="snapshot" width="800"/>
+</p>
 ---
 
 ## 🚀 Instalasi & Konfigurasi
