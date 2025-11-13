@@ -1,14 +1,23 @@
-import cv2
-import yt_dlp
+# app.py (KODE INI MENGATASI MASALAH IMPOR BERAT DAN BATAS THREAD)
+
+# ====================================================================
+# 1. PERBAIKAN LIMIT SUMBER DAYA (PASTIKAN INI DI BARIS ATAS!)
+# Ini mencegah error OpenBLAS: 'Resource temporarily unavailable'
+# ====================================================================
 import os
+os.environ['OPENBLAS_NUM_THREADS'] = '1'
+os.environ['OMP_NUM_THREADS'] = '1'
+os.environ['MKL_NUM_THREADS'] = '1'
+
+# ====================================================================
+# 2. IMPOR RINGAN (TIDAK MEMUAT cv2, torch, numpy, YOLO)
+# ====================================================================
+import yt_dlp
 import uuid
 import threading
 import time
 from datetime import datetime, timedelta
-from ultralytics import YOLO
 from flask import Flask, Response, render_template, jsonify, request, redirect, url_for, send_file
-import torch 
-import numpy as np
 import mysql.connector
 from apscheduler.schedulers.background import BackgroundScheduler
 import io  # Untuk CSV
@@ -20,6 +29,17 @@ try:
 except ImportError:
     print("PERINGATAN: Gagal mengimpor 'processor.py'. Pastikan file tersebut ada.")
     process_video_task = None
+
+# ====================================================================
+# 3. VARIABEL STATUS MODEL GLOBAL
+# ====================================================================
+HEAVY_DEPS_LOADED = False
+# Inisiasi dengan None, akan diisi oleh load_heavy_dependencies()
+MODEL = None 
+DEVICE = 'cpu'
+USE_HALF = False
+cv2 = None # Variabel untuk cv2 global
+np = None # Variabel untuk numpy global
 
 # --- Konfigurasi Database ---
 DB_CONFIG = {
@@ -66,6 +86,9 @@ UPLOAD_FOLDER = 'uploads'
 if not os.path.exists(UPLOAD_FOLDER):
     os.makedirs(UPLOAD_FOLDER)
     
+# ====================================================================
+# 4. INISIASI FLASK (PASTIKAN INI TERJADI SETELAH IMPOR RINGAN)
+# ====================================================================
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -74,21 +97,50 @@ app.config['TEMPLATES_AUTO_RELOAD'] = True
 scheduler = BackgroundScheduler(daemon=True)
 scheduler.start()
 
-# --- Inisialisasi Model & Perangkat (LIVE STREAM) ---
-try:
-    if torch.cuda.is_available():
-        DEVICE = '0' 
-        USE_HALF = True 
-        print("✅ GPU CUDA terdeteksi. Inferensi akan menggunakan GPU.")
-    else:
-        DEVICE = 'cpu'
-        USE_HALF = False
-        print("❌ GPU CUDA tidak terdeteksi. Inferensi akan menggunakan CPU.")
-    model = YOLO(MODEL_NAME)
-    print(f"✅ Model Live Stream ({MODEL_NAME}) berhasil dimuat.")
-except Exception as e:
-    print(f"🔥 FATAL ERROR: Gagal memuat model YOLO '{MODEL_NAME}'. Cek path. Error: {e}")
-    model = None
+# ====================================================================
+# 5. FUNGSI UNTUK MEMUAT DEPENDENSI BERAT (LAZY LOADING)
+# ====================================================================
+def load_heavy_dependencies():
+    """Memuat model dan pustaka berat (cv2, torch, numpy, YOLO) saat dibutuhkan."""
+    global HEAVY_DEPS_LOADED, MODEL, DEVICE, USE_HALF, cv2, np
+    
+    if HEAVY_DEPS_LOADED:
+        return True
+
+    print("INFO: Mencoba memuat dependensi berat (cv2, torch, YOLO)...")
+    try:
+        # Pindahkan impor berat ke sini!
+        import cv2 as cv2_local
+        import numpy as np_local
+        import torch
+        from ultralytics import YOLO
+
+        cv2 = cv2_local # Alihkan variabel global
+        np = np_local # Alihkan variabel global
+
+        # 1. Tentukan Perangkat
+        if torch.cuda.is_available():
+            DEVICE = '0' 
+            USE_HALF = True 
+            print("GPU CUDA terdeteksi. Inferensi akan menggunakan GPU.")
+        else:
+            DEVICE = 'cpu'
+            USE_HALF = False
+            print("GPU CUDA tidak terdeteksi. Inferensi akan menggunakan CPU.")
+
+        # 2. Muat Model
+        MODEL = YOLO(MODEL_NAME)
+        print(f"Model Live Stream ({MODEL_NAME}) berhasil dimuat.")
+        
+        HEAVY_DEPS_LOADED = True
+        return True
+
+    except Exception as e:
+        # PENTING: Jika gagal, aplikasi tetap boot, tetapi video feed akan menunjukkan error
+        print(f"FATAL ERROR: Gagal memuat dependensi berat. Live feed akan non-aktif. Error: {e}")
+        HEAVY_DEPS_LOADED = False
+        return False
+
 
 # --- Fungsi Database ---
 def get_db_connection():
@@ -118,7 +170,6 @@ def update_db_count(column_name):
                 cursor.close()
                 conn.close()
 
-# --- (FUNGSI BARU) Menambahkan Log Timestamp (Live Stream) ---
 def log_detection_to_db(ts, class_name, track_id, source_id):
     """Menyisipkan log deteksi BARU ke tabel detection_log"""
     conn = get_db_connection()
@@ -181,9 +232,9 @@ def reset_db_counts():
             cursor.execute(query_log)
             
             conn.commit()
-            print("✅ DATABASE RESET: Tabel 'traffic_stats' dan 'detection_log' telah direset.")
+            print("DATABASE RESET: Tabel 'traffic_stats' dan 'detection_log' telah direset.")
         except mysql.connector.Error as err:
-            print(f"🔥 ERROR: Gagal me-reset database: {err}")
+            print(f"ERROR: Gagal me-reset database: {err}")
         finally:
             if conn and conn.is_connected():
                 cursor.close()
@@ -195,25 +246,41 @@ def get_youtube_stream_url(url, quality='480p'):
         ydl_opts = {'format': f'bestvideo[height<=?{quality[:-1]}]+bestaudio/best', 'quiet': True, 'skip_download': True,}
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info_dict = ydl.extract_info(url, download=False)
+            # Menggunakan 'url' atau format pertama yang tersedia
             stream_url = info_dict.get('url', info_dict.get('formats')[0]['url'])
             return stream_url
     except Exception as e:
+        print(f"ERROR YT-DLP: Gagal mendapatkan URL stream: {e}")
         return None
 
 # --- Fungsi Deteksi (LIVE STREAM) ---
 def generate_frames():
     global tracked_vehicles, current_fps, frame_counter, latest_results, CURRENT_YOUTUBE_URL
     
-    if model is None:
-        print("Stream Live Gagal: Model tidak dimuat.")
-        return
+    # 1. PANGGIL LOADER DI SINI!
+    if not HEAVY_DEPS_LOADED:
+        if not load_heavy_dependencies():
+            # Jika loading gagal, kirim frame error
+            print("Stream Gagal: Dependensi tidak termuat.")
+            
+            # Buat frame kosong menggunakan variabel global cv2/np
+            if cv2 and np:
+                # PASTIKAN cv2 DAN np SUDAH DIIMPOR, jika tidak, Anda akan mendapat error saat membuat frame.
+                frame = np.zeros((TARGET_HEIGHT, TARGET_WIDTH, 3), dtype=np.uint8) 
+                cv2.putText(frame, "MODEL GAGAL DIMUAT (CEK LOG SERVER)", (50, TARGET_HEIGHT // 2), 
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                ret, buffer = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 40])
+                if ret:
+                    yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+            return
 
+    # KODE HANYA BERJALAN JIKA MODEL SUKSES DIMUAT
     cap = None
     active_url = CURRENT_YOUTUBE_URL 
     
     while cap is None or not cap.isOpened():
         stream_url = get_youtube_stream_url(active_url) or active_url
-        cap = cv2.VideoCapture(stream_url)
+        cap = cv2.VideoCapture(stream_url) # Gunakan cv2 global
         if not cap.isOpened():
             print("FATAL ERROR: Gagal membuka stream video. Mencoba lagi dalam 5 detik...")
             current_fps = 0.0
@@ -237,9 +304,10 @@ def generate_frames():
             cap.release()
             break 
             
-        frame = cv2.resize(frame, (TARGET_WIDTH, TARGET_HEIGHT))
+        frame = cv2.resize(frame, (TARGET_WIDTH, TARGET_HEIGHT)) # Gunakan cv2 global
         
-        results = model.track(frame, persist=True, classes=VEHICLE_CLASSES, verbose=False, imgsz=TARGET_WIDTH, device=DEVICE, half=USE_HALF) 
+        # Ganti model.track menjadi MODEL.track (MODEL adalah variabel global)
+        results = MODEL.track(frame, persist=True, classes=VEHICLE_CLASSES, verbose=False, imgsz=TARGET_WIDTH, device=DEVICE, half=USE_HALF) 
         latest_results = results 
         
         if results and results[0].boxes.id is not None:
@@ -249,7 +317,7 @@ def generate_frames():
                     tracked_vehicles[tid]['age'] = 0 
         
         annotated_frame = frame.copy()
-        cv2.line(annotated_frame, LINE_START, LINE_END, (0, 0, 255), 2)
+        cv2.line(annotated_frame, LINE_START, LINE_END, (0, 0, 255), 2) # Gunakan cv2 global
         
         if latest_results and latest_results[0].boxes.id is not None:
             boxes = latest_results[0].boxes.xyxy.cpu().numpy().astype(int)
@@ -269,22 +337,20 @@ def generate_frames():
                 
                 if is_passing_line and not tracked_vehicles[track_id]['counted']:
                     if db_column:
-                        # --- (PERUBAHAN DI SINI) ---
                         # 1. Update total hitungan (Tabel Lama)
                         update_db_count(db_column) 
                         
                         # 2. Catat log timestamp (Tabel Baru)
                         ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
                         log_detection_to_db(ts, vehicle_name, int(track_id), "Live Stream")
-                        # -------------------------
                         
                     tracked_vehicles[track_id]['counted'] = True
-                    cv2.line(annotated_frame, LINE_START, LINE_END, (0, 255, 255), 4) 
+                    cv2.line(annotated_frame, LINE_START, LINE_END, (0, 255, 255), 4) # Gunakan cv2 global
                 
                 if not tracked_vehicles[track_id]['counted']:
                     label = f"{vehicle_name} ID:{track_id}"
-                    cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2)
-                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.putText(annotated_frame, label, (x1, y1 - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2) # Gunakan cv2 global
+                    cv2.rectangle(annotated_frame, (x1, y1), (x2, y2), (0, 255, 0), 2) # Gunakan cv2 global
                 new_tracked_vehicles[track_id] = tracked_vehicles[track_id]
 
             for tid in tracked_vehicles:
@@ -300,27 +366,27 @@ def generate_frames():
         
         status_text = 'DB CONNECTED' if db_connected else 'DB OFFLINE'
         status_color = (0, 255, 0) if db_connected else (0, 0, 255) 
-        cv2.putText(annotated_frame, f"FPS: {current_fps:.2f} | {status_text}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2)
+        cv2.putText(annotated_frame, f"FPS: {current_fps:.2f} | {status_text}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, status_color, 2) # Gunakan cv2 global
 
-        ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 40]) 
+        ret, buffer = cv2.imencode('.jpg', annotated_frame, [cv2.IMWRITE_JPEG_QUALITY, 40]) # Gunakan cv2 global
         if not ret:
             continue
         frame_bytes = buffer.tobytes()
         yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
 
-# --- Fungsi Hapus File Terjadwal ---
+# --- Fungsi Hapus File Terjadwal (TIDAK BERUBAH) ---
 def delete_file(filepath):
     try:
         if os.path.exists(filepath):
             os.remove(filepath)
-            print(f"✅ SCHEDULER: File {filepath} berhasil dihapus.")
+            print(f"SCHEDULER: File {filepath} berhasil dihapus.")
         else:
             print(f"INFO SCHEDULER: File {filepath} tidak ditemukan (mungkin sudah dihapus).")
     except Exception as e:
-        print(f"🔥 ERROR SCHEDULER: Gagal menghapus {filepath}. Error: {e}")
+        print(f"ERROR SCHEDULER: Gagal menghapus {filepath}. Error: {e}")
 
 # ----------------------------------------------------
-#               DEFINISI ROUTES
+#               DEFINISI ROUTES (TIDAK BERUBAH)
 # ----------------------------------------------------
 
 @app.route('/video_feed')
@@ -335,11 +401,12 @@ def analytics_data():
     
     counts_data = {'Total': 0, 'Car': 0, 'Motorcycle': 0, 'Bus': 0, 'Truck': 0}
     if db_counts:
-        counts_data['Total'] = sum(v for k, v in db_counts.items() if k != 'id')
+        # Gunakan get untuk menghindari KeyError jika kolom belum ada di DB
         counts_data['Car'] = db_counts.get('total_car', 0)
         counts_data['Motorcycle'] = db_counts.get('total_motorcycle', 0)
         counts_data['Bus'] = db_counts.get('total_bus', 0)
         counts_data['Truck'] = db_counts.get('total_truck', 0)
+        counts_data['Total'] = sum(v for k, v in counts_data.items() if k != 'Total')
 
     response_data = {
         'location': CCTV_LOCATION,
@@ -361,9 +428,9 @@ def update_stream():
     
     if request.method == 'POST':
         new_url = request.form.get('youtube_url')
-        if new_url and "youtube.com" in new_url or "youtu.be" in new_url:
+        if new_url and ("youtube.com" in new_url or "youtu.be" in new_url):
             CURRENT_YOUTUBE_URL = new_url
-            print(f"✅ STREAM UPDATE: URL diubah menjadi {new_url}")
+            print(f"STREAM UPDATE: URL diubah menjadi {new_url}")
             
             # Reset KEDUA tabel (total dan log)
             reset_db_counts()
@@ -378,6 +445,7 @@ def update_stream():
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_page():
     if request.method == 'POST':
+        # PENTING: Jika processor.py gagal diimpor, tampilkan error
         if process_video_task is None:
             return render_template('upload.html', error="ERROR: 'processor.py' tidak ditemukan atau gagal dimuat.")
             
@@ -402,6 +470,7 @@ def upload_page():
         else:
             return render_template('upload.html', error="Pilih file atau masukkan URL YouTube.")
 
+        # Panggil fungsi dari processor.py di thread baru
         thread = threading.Thread(
             target=process_video_task, 
             args=(task_id, source_type, source_path, DB_CONFIG),
@@ -449,6 +518,7 @@ def download_file(task_id):
     filepath = os.path.join(app.config['UPLOAD_FOLDER'], f"processed_{task_id}.zip") 
     
     if os.path.exists(filepath):
+        # Perpanjang waktu hapus setelah diunduh (5 menit)
         delete_time = datetime.now() + timedelta(minutes=5) 
         
         scheduler.add_job(
@@ -471,11 +541,11 @@ def download_file(task_id):
     return "File tidak ditemukan atau tidak ada deteksi (file ZIP tidak dibuat).", 404
 
 # ----------------------------------------------------
-#               (RUTE DOWNLOAD CSV - DIPERBARUI)
+#               (RUTE DOWNLOAD CSV)
 # ----------------------------------------------------
 @app.route('/download_rekap_csv')
 def download_rekap_csv():
-    """(DIPERBARUI) Mengunduh log deteksi mentah dari tabel 'detection_log'"""
+    """Mengunduh log deteksi mentah dari tabel 'detection_log'"""
     
     conn = get_db_connection()
     if not conn:
