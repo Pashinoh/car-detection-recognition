@@ -32,7 +32,7 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
     2.  **Proses Upload:** Menggunakan model **YOLOv8n standar (`yolov8n.pt`)** untuk fleksibilitas, memetakan kelas COCO ke database.
 
     <p align="center">
-    <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/log.jpg" alt="snapshot" width="800"/>
+    <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/log.png" alt="snapshot" width="800"/>
     </p>
 
 -   **📤 Pemrosesan Latar Belakang & Output ZIP:**
@@ -71,7 +71,7 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan database yang sama.
 
 <p align="center">
-  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/interface.jpg" alt="snapshot" width="800"/>
+  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/interface.png" alt="snapshot" width="800"/>
 </p>
 ---
 
