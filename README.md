@@ -1,4 +1,4 @@
-# 🚗 Traffic Analyst PRO
+# Traffic Analyst PRO
 
 Sistem analisis lalu lintas berbasis web yang menyediakan deteksi dan penghitungan kendaraan secara *real-time* dari *stream* YouTube, serta pemrosesan video *on-demand* dengan model AI yang berbeda.
 
@@ -19,15 +19,15 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 
 ---
 
-## ✨ Fitur Utama
+## Fitur Utama
 
--   **🖥️ Dasbor Live Dinamis:**
+-   **Dasbor Live Dinamis:**
     -   Streaming video langsung dari YouTube ke antarmuka web.
     -   Formulir UI untuk **mengganti link YouTube kapan saja**.
     -   **Reset Otomatis:** Mengganti link stream akan secara otomatis **mereset** total hitungan di database ke 0, memulai sesi pemantauan baru.
     -   Statistik *real-time* (FPS, Status DB, Total Kendaraan) diperbarui setiap 2 detik.
 
--   **🚀 Arsitektur Dua Model:**
+-   **Arsitektur Dua Model:**
     1.  **Live Stream:** Menggunakan model **YOLOv8 kustom (`best.pt`)** yang dilatih untuk 4 kelas (Mobil, Motor, Bus, Truk).
     2.  **Proses Upload:** Menggunakan model **YOLOv8n standar (`yolov8n.pt`)** untuk fleksibilitas, memetakan kelas COCO ke database.
 
@@ -35,25 +35,25 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
     <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/log.png" alt="snapshot" width="800"/>
     </p>
 
--   **📤 Pemrosesan Latar Belakang & Output ZIP:**
+-   **Pemrosesan Latar Belakang & Output ZIP:**
     -   Halaman `/upload` terpisah untuk memproses video atau link YouTube di latar belakang (`threading`).
     -   **Anti-Video Rusak:** Prosesor tidak membuat file MP4. Sebaliknya, ia **menyimpan satu gambar JPG** berkualitas tinggi setiap kali kendaraan **dihitung** (melintasi garis).
     -   Secara otomatis mengompres semua gambar hasil deteksi ke dalam satu **file `.zip`** yang siap diunduh.
     -   Halaman status tugas (berwarna merah) yang me-refresh otomatis hingga file ZIP siap.
 
--   **📊 Manajemen Database Ganda (MySQL):**
+-   **Manajemen Database Ganda (MySQL):**
     1.  **Tabel `traffic_stats`:** Menyimpan 1 baris **total akumulasi** (untuk tampilan dasbor).
     2.  **Tabel `detection_log`:** Menyimpan **log *timestamp*** terperinci untuk *setiap* kendaraan yang dihitung dari *semua sumber* (Live Stream & Upload).
 
--   **📈 Download Laporan CSV:**
+-   **Download Laporan CSV:**
     -   Fitur di Navbar untuk mengunduh **rekap penuh** dari tabel `detection_log` sebagai file `.csv` untuk analisis data historis.
 
--   **⚙️ Manajemen Server (Siap Hosting):**
+-   **Manajemen Server (Siap Hosting):**
     -   Menggunakan `apscheduler` untuk **menghapus file secara otomatis** dari folder `uploads/` 5-15 menit setelah diunggah/diunduh, mencegah server penuh.
 
 ---
 
-## 🛠️ Tumpukan Teknologi (Technology Stack)
+## Tumpukan Teknologi (Technology Stack)
 
 ![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=yellow)
 ![Flask](https://img.shields.io/badge/Flask-Web_Server-black?logo=flask)
@@ -66,7 +66,7 @@ Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai 
 
 ---
 
-## 🏛️ Arsitektur Sistem
+## Arsitektur Sistem
 
 Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan database yang sama.
 
@@ -75,7 +75,7 @@ Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan databas
 </p>
 ---
 
-## 🚀 Instalasi & Konfigurasi
+## Instalasi & Konfigurasi
 
 Ikuti langkah-langkah ini untuk menjalankan aplikasi secara lokal.
 
