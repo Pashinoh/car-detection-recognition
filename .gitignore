@@ -27,3 +27,5 @@ model/yolov8n.pt
 
 # Artefak runtime di uploads/ (dibuat & dihapus otomatis oleh scheduler)
 uploads/processed_*
+# Model pretrained standar di root (auto-download ultralytics)
+yolov8n.pt
