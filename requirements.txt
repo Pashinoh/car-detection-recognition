@@ -1,6 +1,10 @@
 ultralytics
-opencv-python
+# headless = tanpa GUI (app tidak pakai cv2.imshow) -> lebih kecil & tanpa dependensi GTK/Qt
+opencv-python-headless
 flask
 yt-dlp
 mysql-connector-python
 apscheduler
+
+# (opsional, hemat ~2GB disk jika inference hanya di CPU):
+# py -m pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
