@@ -1,89 +1,54 @@
 # Traffic Analyst PRO
 
-Sistem analisis lalu lintas berbasis web yang menyediakan deteksi dan penghitungan kendaraan secara *real-time* dari *stream* YouTube, serta pemrosesan video *on-demand* dengan model AI yang berbeda.
+Aplikasi web untuk analisis lalu lintas: deteksi dan penghitungan kendaraan secara real-time dari live stream YouTube, serta pemrosesan video on-demand.
 
-<p align="center">
-  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/animated.gif" alt="Demo Aplikasi" width="800"/>
-</p>
-<p align="center">
-  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/snapshot.jpg" alt="snapshot" width="800"/>
-</p>
+![Tampilan aplikasi](uploads/snapshot.jpg)
 
----
+## Fitur
 
-## Abstract
+- **Dashboard Live** — streaming video dari YouTube, penghitungan kendaraan melewati garis deteksi, dan statistik real-time (FPS, status database, total per jenis kendaraan) yang diperbarui tiap 2 detik.
+- **Ganti Sumber Stream** — URL YouTube dapat diganti kapan saja lewat dashboard; mengganti URL otomatis mereset hitungan dan memulai sesi pemantauan baru.
+- **Pemrosesan Video On-Demand** — unggah file video atau tautan YouTube untuk dianalisis di latar belakang. Setiap event penghitungan disimpan sebagai gambar JPG dan dikompresi menjadi satu file ZIP yang dapat diunduh.
+- **Laporan CSV** — ekspor seluruh log deteksi (timestamp, jenis kendaraan, track ID, sumber) sebagai file CSV.
 
-Proyek ini adalah aplikasi web Flask lengkap yang dirancang untuk pemantauan lalu lintas cerdas. Aplikasi ini memiliki dua fungsionalitas inti: (1) **Dasbor Pemantauan Live**, yang melacak kendaraan dari *stream* YouTube menggunakan model YOLOv8 kustom dan mencatat total hitungan ke database. (2) **Modul Pemrosesan Latar Belakang**, yang memungkinkan pengguna mengunggah file video atau link YouTube untuk dianalisis oleh model YOLOv8 standar (`yolov8n.pt`).
+## Arsitektur
 
-Untuk mengatasi masalah kompatibilitas video, hasil pemrosesan disimpan sebagai kumpulan gambar (JPG) dari setiap *event* deteksi, yang kemudian dikompresi ke dalam satu file `.zip`. Seluruh sistem terhubung ke database MySQL yang mencatat total hitungan dan log *timestamp* terperinci untuk setiap kendaraan yang terdeteksi.
+Dua alur kerja yang berbagi database yang sama:
 
----
+1. **Live Stream** — model YOLOv8 kustom (`model/best.pt`, 4 kelas: car, motorcycle, bus, truck) mendeteksi dan melacak kendaraan pada stream; setiap kendaraan yang melewati garis deteksi dicatat ke database.
+2. **Pemrosesan Upload** — model YOLOv8n standar (`yolov8n.pt`) memproses video yang diunggah dalam background thread; hasil berupa gambar per event yang dikompresi ke ZIP.
 
-## Fitur Utama
+Kedua alur mencatat data ke MySQL:
 
--   **Dasbor Live Dinamis:**
-    -   Streaming video langsung dari YouTube ke antarmuka web.
-    -   Formulir UI untuk **mengganti link YouTube kapan saja**.
-    -   **Reset Otomatis:** Mengganti link stream akan secara otomatis **mereset** total hitungan di database ke 0, memulai sesi pemantauan baru.
-    -   Statistik *real-time* (FPS, Status DB, Total Kendaraan) diperbarui setiap 2 detik.
+| Tabel | Isi |
+|---|---|
+| `traffic_stats` | Total akumulasi per jenis kendaraan (untuk dashboard) |
+| `detection_log` | Log timestamp setiap event penghitungan (semua sumber) |
 
--   **Arsitektur Dua Model:**
-    1.  **Live Stream:** Menggunakan model **YOLOv8 kustom (`best.pt`)** yang dilatih untuk 4 kelas (Mobil, Motor, Bus, Truk).
-    2.  **Proses Upload:** Menggunakan model **YOLOv8n standar (`yolov8n.pt`)** untuk fleksibilitas, memetakan kelas COCO ke database.
+## Teknologi
 
-    <p align="center">
-    <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/log.png" alt="snapshot" width="800"/>
-    </p>
+Python, Flask, Ultralytics YOLOv8, OpenCV, yt-dlp, MySQL, APScheduler.
 
--   **Pemrosesan Latar Belakang & Output ZIP:**
-    -   Halaman `/upload` terpisah untuk memproses video atau link YouTube di latar belakang (`threading`).
-    -   **Anti-Video Rusak:** Prosesor tidak membuat file MP4. Sebaliknya, ia **menyimpan satu gambar JPG** berkualitas tinggi setiap kali kendaraan **dihitung** (melintasi garis).
-    -   Secara otomatis mengompres semua gambar hasil deteksi ke dalam satu **file `.zip`** yang siap diunduh.
-    -   Halaman status tugas (berwarna merah) yang me-refresh otomatis hingga file ZIP siap.
+## Instalasi
 
--   **Manajemen Database Ganda (MySQL):**
-    1.  **Tabel `traffic_stats`:** Menyimpan 1 baris **total akumulasi** (untuk tampilan dasbor).
-    2.  **Tabel `detection_log`:** Menyimpan **log *timestamp*** terperinci untuk *setiap* kendaraan yang dihitung dari *semua sumber* (Live Stream & Upload).
+Prasyarat: Python 3.11+ dan MySQL (contoh: XAMPP).
 
--   **Download Laporan CSV:**
-    -   Fitur di Navbar untuk mengunduh **rekap penuh** dari tabel `detection_log` sebagai file `.csv` untuk analisis data historis.
-
--   **Manajemen Server (Siap Hosting):**
-    -   Menggunakan `apscheduler` untuk **menghapus file secara otomatis** dari folder `uploads/` 5-15 menit setelah diunggah/diunduh, mencegah server penuh.
-
----
-
-## Tumpukan Teknologi (Technology Stack)
-
-![Python](https://img.shields.io/badge/Python-3.11%2B-blue?logo=python&logoColor=yellow)
-![Flask](https://img.shields.io/badge/Flask-Web_Server-black?logo=flask)
-![YOLOv8](https://img.shields.io/badge/YOLOv8-Object_Detection-blueviolet)
-![OpenCV](https://img.shields.io/badge/OpenCV-Video_process-orange?logo=opencv)
-![MySQL](https://img.shields.io/badge/MySQL-Database-blue?logo=mysql)
-![HTML5](https://img.shields.io/badge/HTML5-Frontend-red?logo=html5)
-![CSS3](https://img.shields.io/badge/CSS3-Styling-blue?logo=css3)
-![JavaScript](https://img.shields.io/badge/JavaScript-Dynamic-yellow?logo=javascript)
-
----
-
-## Arsitektur Sistem
-
-Sistem ini berjalan dengan dua alur kerja utama yang berinteraksi dengan database yang sama.
-
-<p align="center">
-  <img src="https://github.com/Pashinoh/car-detection-recognition/blob/main/uploads/interface.png" alt="snapshot" width="800"/>
-</p>
----
-
-## Instalasi & Konfigurasi
-
-Ikuti langkah-langkah ini untuk menjalankan aplikasi secara lokal.
-
-### 1. Prasyarat
-* Python 3.11+
-* Server MySQL (Contoh: **XAMPP** dengan **phpMyAdmin**)
-
-### 2. Kloning Repositori
 ```bash
 git clone https://github.com/Pashinoh/car-detection-recognition.git
 cd car-detection-recognition
+pip install -r requirements.txt
+```
+
+Import skema database dari `db/traffic_db.sql` (via phpMyAdmin atau `mysql` CLI), lalu sesuaikan koneksi di `DB_CONFIG` pada `app.py` bila perlu.
+
+```bash
+python app.py
+```
+
+- Dashboard live: `http://127.0.0.1:5000/`
+- Halaman upload: `http://127.0.0.1:5000/upload`
+
+## Catatan
+
+- File yang diunggah dan hasil ZIP dihapus otomatis oleh APScheduler beberapa menit setelah dibuat, sehingga folder `uploads/` tidak menumpuk.
+- File `yolov8n.pt` diunduh otomatis oleh Ultralytics saat pertama kali aplikasi dijalankan.
