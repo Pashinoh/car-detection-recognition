@@ -15,3 +15,15 @@ dataset/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Tools lokal
+.codegraph/
+.opencode/
+*.code-workspace
+openspec/
+
+# Model pretrained standar (auto-download oleh ultralytics)
+model/yolov8n.pt
+
+# Artefak runtime di uploads/ (dibuat & dihapus otomatis oleh scheduler)
+uploads/processed_*
