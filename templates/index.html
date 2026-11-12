@@ -1,76 +1,77 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard Live - PRO Traffic Analyzer{% endblock %}
+{% block title %}Dashboard Live - Traffic Analyst PRO{% endblock %}
 
 {% block content %}
+<div class="page-header">
+    <h1>Dashboard Pemantauan Langsung</h1>
+    <p>Pantau aliran kendaraan secara real-time dan kelola sumber stream aktif.</p>
+</div>
 
-<div class="card" style="margin-bottom: 30px;">
-    <div class="card-header" style="color: var(--secondary-color); background-color: #f0f0f0;">
-        Pengaturan Live Stream
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Pengaturan Live Stream</h2>
     </div>
     <div class="card-body">
         <form action="{{ url_for('update_stream') }}" method="POST">
-            <label for="youtube_url_input" style="display: block; margin-bottom: 10px; font-weight: bold;">
-                Ganti URL YouTube Live Stream:
-            </label>
-            <div style="display: flex; gap: 15px;">
-                <input type="text" name="youtube_url" id="youtube_url_input" 
-                       value="{{ current_url }}" 
-                       style="flex: 1; margin: 0;" 
-                       placeholder="Masukkan link YouTube baru...">
-                
-                <button type="submit" style="background-color: var(--danger-color); font-size: 1em; padding: 10px 15px;">
-                    Ganti Stream & Reset Data
-                </button>
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="youtube_url_input">URL YouTube Live Stream</label>
+                    <input type="text" name="youtube_url" id="youtube_url_input"
+                           value="{{ current_url }}"
+                           placeholder="Masukkan URL YouTube baru">
+                </div>
+                <button type="submit" class="btn btn-danger">Ganti Stream &amp; Reset Data</button>
             </div>
-            <p style="font-size: 0.9em; color: #777; margin-top: 10px;">
-                *Perhatian: Mengganti stream akan **me-reset semua hitungan** di database kembali ke 0.
-            </p>
+            <p class="helper-text">Mengganti stream akan mengatur ulang seluruh data hitungan di database menjadi 0.</p>
         </form>
     </div>
 </div>
-<div style="display: flex; gap: 30px; flex-wrap: wrap;">
-    <div style="flex: 2; min-width: 400px;">
-        <div class="card">
-            <div class="card-header">
-                Live Stream CCTV: <span id="cctv-location">Memuat...</span>
-                <span style="font-size: 0.9em; opacity: 0.8; margin-left: 15px;" id="system-status">Memuat Status...</span>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <div class="card-header">
+            <div>
+                <h2 class="card-title">Live Stream CCTV</h2>
+                <div class="card-subtitle">Lokasi: <span id="cctv-location">Memuat...</span></div>
             </div>
-            <div class="card-body" style="padding: 0; line-height: 0;">
-                <img id="main-video" src="{{ url_for('video_feed') }}" alt="Live Feed" style="width: 100%; height: auto; display: block; border-radius: 0 0 8px 8px;">
-            </div>
+            <span class="status-badge" id="system-status">Memuat status...</span>
+        </div>
+        <div class="card-body flush">
+            <img id="main-video" src="{{ url_for('video_feed') }}" alt="Tampilan live stream" class="video-frame">
         </div>
     </div>
-    
-    <div style="flex: 1; min-width: 300px;">
-        <div class="card">
-            <div class="card-header">
-                Statistik Real-time (Data dari MySQL)
-            </div>
-            <div class="card-body">
-                <div class="data-item" style="display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px dashed #ddd;">
-                    <span>FPS (Performa)</span>
-                    <strong id="fps-value" style="color: var(--success-color);">0.00</strong>
+
+    <div class="card">
+        <div class="card-header">
+            <h2 class="card-title">Statistik Real-time</h2>
+            <span class="card-subtitle">Sumber: MySQL</span>
+        </div>
+        <div class="card-body">
+            <div class="stat-list">
+                <div class="stat-row">
+                    <span class="stat-label">FPS (Performa)</span>
+                    <strong class="stat-value" id="fps-value">0.00</strong>
                 </div>
-                <div class="data-item total-item" style="display: flex; justify-content: space-between; padding: 10px 0; border-top: 2px solid var(--primary-color); margin-top: 15px; font-weight: bold;">
-                    <span>TOTAL KENDARAAN (DB)</span>
-                    <strong id="total-count" style="font-size: 1.1em;">0</strong>
+                <div class="stat-row">
+                    <span class="stat-label">Mobil</span>
+                    <strong class="stat-value" id="car-count">0</strong>
                 </div>
-                <div class="data-item" style="display: flex; justify-content: space-between; padding: 5px 0;">
-                    <span>Car Count</span>
-                    <strong id="car-count">0</strong>
+                <div class="stat-row">
+                    <span class="stat-label">Sepeda Motor</span>
+                    <strong class="stat-value" id="motorcycle-count">0</strong>
                 </div>
-                <div class="data-item" style="display: flex; justify-content: space-between; padding: 5px 0;">
-                    <span>Motorcycle Count</span>
-                    <strong id="motorcycle-count">0</strong>
+                <div class="stat-row">
+                    <span class="stat-label">Bus</span>
+                    <strong class="stat-value" id="bus-count">0</strong>
                 </div>
-                <div class="data-item" style="display: flex; justify-content: space-between; padding: 5px 0;">
-                    <span>Bus Count</span>
-                    <strong id="bus-count">0</strong>
+                <div class="stat-row">
+                    <span class="stat-label">Truk</span>
+                    <strong class="stat-value" id="truck-count">0</strong>
                 </div>
-                <div class="data-item" style="display: flex; justify-content: space-between; padding: 5px 0;">
-                    <span>Truck Count</span>
-                    <strong id="truck-count">0</strong>
+                <div class="stat-row stat-total">
+                    <span class="stat-label">Total Kendaraan</span>
+                    <strong class="stat-value" id="total-count">0</strong>
                 </div>
             </div>
         </div>
@@ -88,24 +89,27 @@
             })
             .then(data => {
                 document.getElementById('cctv-location').textContent = data.location || "N/A";
-                
+
                 const fpsValue = parseFloat(data.fps);
                 const statusElement = document.getElementById('system-status');
-                const dbStatus = data.db_status; 
-                
+                const dbStatus = data.db_status;
+
                 if (dbStatus === 'ONLINE' && fpsValue > 0) {
-                    statusElement.textContent = 'STATUS: ONLINE (DB OK)';
-                    statusElement.style.color = 'var(--success-color)';
+                    statusElement.textContent = 'Status: Online (DB aktif)';
+                    statusElement.style.color = 'var(--success)';
+                    statusElement.style.background = '#dcfce7';
                 } else if (dbStatus === 'ONLINE' && fpsValue === 0) {
-                     statusElement.textContent = 'STATUS: DB OK, VIDEO OFFLINE/LOADING...';
-                     statusElement.style.color = 'var(--warning-color)';
+                    statusElement.textContent = 'Status: DB aktif, video belum siap';
+                    statusElement.style.color = 'var(--warning)';
+                    statusElement.style.background = '#fef3c7';
                 } else {
-                    statusElement.textContent = 'STATUS: DB OFFLINE';
-                    statusElement.style.color = 'var(--danger-color)';
+                    statusElement.textContent = 'Status: DB tidak terhubung';
+                    statusElement.style.color = 'var(--danger)';
+                    statusElement.style.background = '#fee2e2';
                 }
 
                 document.getElementById('fps-value').textContent = data.fps || '0.00';
-                
+
                 if (data.counts) {
                     document.getElementById('total-count').textContent = data.counts.Total || 0;
                     document.getElementById('car-count').textContent = data.counts.Car || 0;
@@ -113,8 +117,7 @@
                     document.getElementById('bus-count').textContent = data.counts.Bus || 0;
                     document.getElementById('truck-count').textContent = data.counts.Truck || 0;
                 }
-                
-                // Update input field HANYA jika pengguna tidak sedang mengetik di dalamnya
+
                 const urlInput = document.getElementById('youtube_url_input');
                 if (document.activeElement !== urlInput) {
                     urlInput.value = data.current_url;
@@ -122,11 +125,13 @@
             })
             .catch(error => {
                 console.error('Error fetching analytics:', error);
-                document.getElementById('system-status').textContent = 'STATUS: FETCH ERROR';
-                document.getElementById('system-status').style.color = 'var(--danger-color)';
+                const statusElement = document.getElementById('system-status');
+                statusElement.textContent = 'Status: Gagal memuat data';
+                statusElement.style.color = 'var(--danger)';
+                statusElement.style.background = '#fee2e2';
             });
     }
-    setInterval(fetchAnalytics, 2000); 
+    setInterval(fetchAnalytics, 2000);
     fetchAnalytics();
 </script>
 {% endblock %}

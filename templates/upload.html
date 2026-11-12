@@ -1,34 +1,39 @@
 {% extends "base.html" %}
 
-{% block title %}Upload Video & URL{% endblock %}
+{% block title %}Upload Video - Traffic Analyst PRO{% endblock %}
 
 {% block content %}
-<div class="card" style="max-width: 600px; margin: auto;">
+<div class="page-header">
+    <h1>Upload &amp; Proses Video</h1>
+    <p>Unggah file video atau masukkan URL YouTube untuk diproses oleh sistem deteksi.</p>
+</div>
+
+<div class="card center-card">
     <div class="card-header">
-        Unggah Video atau URL YouTube
+        <h2 class="card-title">Sumber Video</h2>
     </div>
     <div class="card-body">
         {% if error %}
-            <div style="color: var(--danger-color); margin-bottom: 15px; border: 1px solid var(--danger-color); padding: 10px; border-radius: 4px;">{{ error }}</div>
+            <div class="notice notice-error">{{ error }}</div>
         {% endif %}
-        
+
         <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_page') }}">
-            <label for="video_file" style="display: block; margin-bottom: 5px; font-weight: bold;">1. Upload File Video (MP4/MOV)</label>
-            <input type="file" name="video_file" id="video_file" accept="video/*" style="display: block; width: 100%; margin-bottom: 20px;">
+            <div class="form-group">
+                <label for="video_file">1. Unggah file video (MP4/MOV)</label>
+                <input type="file" name="video_file" id="video_file" accept="video/*">
+            </div>
 
-            <p style="text-align: center; margin: 20px 0; font-weight: bold; color: var(--secondary-color);">— ATAU —</p>
+            <div class="divider">Atau</div>
 
-            <label for="youtube_url" style="display: block; margin-bottom: 5px; font-weight: bold;">2. Masukkan URL YouTube Live/Video</label>
-            <input type="text" name="youtube_url" id="youtube_url" placeholder="Contoh: https://www.youtube.com/watch?v=..." style="display: block; width: 100%; margin-bottom: 30px;">
+            <div class="form-group">
+                <label for="youtube_url">2. Masukkan URL YouTube (Live/Video)</label>
+                <input type="text" name="youtube_url" id="youtube_url" placeholder="https://www.youtube.com/watch?v=...">
+            </div>
 
-            <button type="submit" style="width: 100%;">
-                Mulai Analisis
-            </button>
+            <button type="submit" class="btn btn-primary btn-block">Mulai Analisis</button>
         </form>
-        
-        <p style="font-size: 0.9em; color: #777; margin-top: 20px; text-align: center;">
-            *Hasil akan berupa file ZIP berisi gambar. File akan dihapus 5-15 menit setelah diunggah/diunduh.
-        </p>
+
+        <p class="helper-text text-center">Hasil pemrosesan akan tersedia dalam format ZIP berisi gambar deteksi. File hasil disimpan sementara dan dihapus otomatis setelah beberapa menit.</p>
     </div>
 </div>
 {% endblock %}
